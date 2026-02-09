@@ -142,8 +142,13 @@ class WebhookUpdater:
             exit(1)
 
     def update_loop(self, content_func: Callable[..., str]):
-
-        next_update_check = datetime.now()
+        
+        if sys.argv[-1] != "UpdateFox.py":
+            next_update_check = datetime.fromtimestamp(int(sys.argv[-1]))
+        
+        else:
+            next_update_check = datetime.now()
+        
         last_sha = None
 
         while True:
@@ -168,4 +173,5 @@ class WebhookUpdater:
     def restart(self):
         print("Restarting application...")
         python = sys.executable
-        os.execv(python, [python] + sys.argv)
+        time = datetime.now() + timedelta(days=1)
+        os.execv(python, [python] + sys.argv + [str(time.timestamp())])
