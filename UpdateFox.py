@@ -57,6 +57,7 @@ def get_system_stats(printer: bl.Printer, restart: bool) -> str:
     return msg
 
 if __name__ == "__main__":
+    # Comment to not make it update
     updater = WebhookUpdater(timeout=10)
     ip = updater.get_config_value("PRINTER", "ip")
     serial = updater.get_config_value("PRINTER", "serial")
