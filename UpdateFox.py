@@ -70,6 +70,8 @@ if __name__ == "__main__":
         local_repo_path=updater.get_config_value("UPDATER", "local_repo_path")
     )
 
+    updater.github_updater = github_updater
+
     printer = bl.Printer(ip, access_code, serial)
     
     printer.connect()

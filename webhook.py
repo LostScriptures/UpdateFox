@@ -147,20 +147,21 @@ class WebhookUpdater:
         last_sha = None
 
         while True:
-            content = content_func()
+            content = content_func(False)
 
             if content != self.last_msg:
                 self.update_msg(content)
                 self.last_msg = content
 
-            if (now := datetime.now()) >= next_update_check and now.day + 1 >= next_update_check.day:
+            if (now := datetime.now()) >= next_update_check:
+                next_update_check = now + timedelta(days=1)
                 print(f"[{now}]Checking for updates...")
                 if self.github_updater is not None:
                     last_sha, updated = self.github_updater.check_and_update_repo(last_sha) 
                 
-                if updated:
-                    content_func(True)
-                    self.restart()
+                    if updated:
+                        content_func(True)
+                        self.restart()
 
             time.sleep(self.timeout)
 
