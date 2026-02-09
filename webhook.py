@@ -1,15 +1,21 @@
 import requests
 import time
+import os
+import sys
 from functools import cache
 from configparser import ConfigParser
-from typing import Callable
+from typing import Callable, Optional
 from pathlib import Path
+from datetime import datetime, timedelta
+
+from GithubUpdater import GithubUpdater
 
 CWD = Path(__file__).parent
 
 class WebhookUpdater:
     def __init__(self, filename: str = "config.ini", timeout: int = 20):
         self.timeout = timeout
+        self.github_updater: Optional[GithubUpdater] = None
         self.last_msg: str = ""
         
         # Get webhook details from config file
@@ -39,15 +45,27 @@ class WebhookUpdater:
         # Construct webhook URL
         self.hook_url = f"https://discord.com/api/webhooks/{self.id}/{self.token}"
 
-
         self.msg_id = self.get_config_value("WEBHOOK", "MSG_ID")
         if self.msg_id == "":
-            response = self.send_msg("Setup...")
-            
-            self.msg_id = response["id"]
-            parser.set("WEBHOOK", "MSG_ID", str(self.msg_id))
+            print("No existing message ID found, sending new message...")
+            self.get_new_msg_id(self.msg_id, parser, filename)
+        
+        try:
+            self.update_msg("Setup...")
 
+        except:
+            print("Failed to update message, resetting MSG_ID and sending new message...")
+            parser.set("WEBHOOK", "MSG_ID", "")
             self.write_config(filename)
+            self.get_new_msg_id(self.msg_id, parser, filename)
+
+    def get_new_msg_id(self, msg_id: str, parser: ConfigParser, filename: str):
+        response = self.send_msg("Setup...")
+            
+        self.msg_id = response["id"]
+        parser.set("WEBHOOK", "MSG_ID", str(self.msg_id))
+
+        self.write_config(filename)
 
     def write_config(self, filename: str):
         if self.config is None:
@@ -125,11 +143,28 @@ class WebhookUpdater:
 
     def update_loop(self, content_func: Callable[..., str]):
 
+        next_update_check = datetime.now()
+        last_sha = None
+
         while True:
             content = content_func()
 
             if content != self.last_msg:
                 self.update_msg(content)
                 self.last_msg = content
-            
+
+            if (now := datetime.now()) >= next_update_check and now.day + 1 >= next_update_check.day:
+                print(f"[{now}]Checking for updates...")
+                if self.github_updater is not None:
+                    last_sha, updated = self.github_updater.check_and_update_repo(last_sha) 
+                
+                if updated:
+                    content_func(True)
+                    self.restart()
+
             time.sleep(self.timeout)
+
+    def restart(self):
+        print("Restarting application...")
+        python = sys.executable
+        os.execv(python, [python] + sys.argv)

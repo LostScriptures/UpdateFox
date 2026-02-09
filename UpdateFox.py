@@ -4,8 +4,13 @@ from functools import partial
 import bambulabs_api as bl
 
 from webhook import WebhookUpdater
+from GithubUpdater import GithubUpdater
 
-def get_system_stats(printer: bl.Printer) -> str:
+def get_system_stats(printer: bl.Printer, restart: bool) -> str:
+    if restart:
+        printer.disconnect()
+        return "Restarting..."
+    
     msg = "System Stats:\n-- CPU --\n"
 
     # CPU usage (percentage)
@@ -56,7 +61,15 @@ if __name__ == "__main__":
     ip = updater.get_config_value("PRINTER", "ip")
     serial = updater.get_config_value("PRINTER", "serial")
     access_code = updater.get_config_value("PRINTER", "access_code")
-    
+
+    github_updater = GithubUpdater(
+        repo_owner=updater.get_config_value("UPDATER", "repo_owner"),
+        repo_name=updater.get_config_value("UPDATER", "repo_name"),
+        branch=updater.get_config_value("UPDATER", "branch"),
+        trigger=updater.get_config_value("UPDATER", "trigger"),
+        local_repo_path=updater.get_config_value("UPDATER", "local_repo_path")
+    )
+
     printer = bl.Printer(ip, access_code, serial)
     
     printer.connect()
