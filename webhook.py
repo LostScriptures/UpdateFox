@@ -144,7 +144,7 @@ class WebhookUpdater:
     def update_loop(self, content_func: Callable[..., str]):
         
         if sys.argv[-1] != "UpdateFox.py":
-            next_update_check = datetime.fromtimestamp(int(sys.argv[-1]))
+            next_update_check = datetime.fromtimestamp(float(sys.argv[-1]))
         
         else:
             next_update_check = datetime.now()
