@@ -50,7 +50,7 @@ class WebhookUpdater:
         self.msg_id = self.get_config_value("WEBHOOK", "MSG_ID")
         if self.msg_id == "":
             print("No existing message ID found, sending new message...")
-            self.get_new_msg_id(self.msg_id, parser, filename)
+            self.get_new_msg_id(parser, filename)
         
         try:
             self.update_msg("Setup...")
@@ -59,9 +59,9 @@ class WebhookUpdater:
             print("Failed to update message, resetting MSG_ID and sending new message...")
             parser.set("WEBHOOK", "MSG_ID", "")
             self.write_config(filename)
-            self.get_new_msg_id(self.msg_id, parser, filename)
+            self.get_new_msg_id(parser, filename)
 
-    def get_new_msg_id(self, msg_id: str, parser: ConfigParser, filename: str):
+    def get_new_msg_id(self, parser: ConfigParser, filename: str):
         """Sends a new message to the Discord channel and updates the configuration with the new message ID."""
         response = self.send_msg("Setup...")
             
