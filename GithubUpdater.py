@@ -2,7 +2,9 @@ import requests
 import subprocess
 
 class GithubUpdater:
+    """Class responsible for checking a GitHub repository for new commits and updating a local repository if a specified trigger is found in the commit message."""
     def __init__(self, repo_owner: str, repo_name: str, branch: str, trigger: str, local_repo_path: str):
+        """Initializes the GithubUpdater with repository details and trigger information."""
         self.repo_owner = repo_owner
         self.repo_name = repo_name
         self.branch = branch
@@ -10,6 +12,7 @@ class GithubUpdater:
         self.local_repo_path = local_repo_path
 
     def check_and_update_repo(self, last_sha: str | None) -> tuple[str | None, bool]:
+        """Checks the GitHub repository for new commits and updates the local repository if the trigger is found in the commit message."""
         updated = False
         url = f"https://api.github.com/repos/{self.repo_owner}/{self.repo_name}/commits/{self.branch}"
         r = requests.get(url)

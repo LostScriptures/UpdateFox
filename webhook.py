@@ -13,7 +13,9 @@ from GithubUpdater import GithubUpdater
 CWD = Path(__file__).parent
 
 class WebhookUpdater:
+    """Class responsible for managing a Discord webhook, including sending and updating messages, and checking for updates from a GitHub repository using a GithubUpdater instance."""
     def __init__(self, filename: str = "config.ini", timeout: int = 20):
+        """Initializes the WebhookUpdater by loading configuration from the specified file, setting up the webhook URL, and ensuring a message ID is available for updates."""
         self.timeout = timeout
         self.github_updater: Optional[GithubUpdater] = None
         self.last_msg: str = ""
@@ -60,6 +62,7 @@ class WebhookUpdater:
             self.get_new_msg_id(self.msg_id, parser, filename)
 
     def get_new_msg_id(self, msg_id: str, parser: ConfigParser, filename: str):
+        """Sends a new message to the Discord channel and updates the configuration with the new message ID."""
         response = self.send_msg("Setup...")
             
         self.msg_id = response["id"]
@@ -68,6 +71,7 @@ class WebhookUpdater:
         self.write_config(filename)
 
     def write_config(self, filename: str):
+        """Writes the current configuration back to the specified file."""
         if self.config is None:
             raise ValueError("Configuration parser is not initialized.")
 
@@ -85,6 +89,7 @@ class WebhookUpdater:
 
     @cache
     def text_to_emoji(self, text: str) -> str:
+        """Converts a given text string to a corresponding string of Discord letter emojis."""
         indicator = ":regional_indicator_?:"
         emoji_text = ""
         
@@ -94,6 +99,7 @@ class WebhookUpdater:
         return emoji_text
 
     def send_msg(self, content: str) -> dict:
+        """Sends a message to the Discord channel via the webhook and returns the response as a dictionary."""
         resp = requests.post(
             self.hook_url + "?wait=true",
             json={"content": content}
@@ -105,6 +111,7 @@ class WebhookUpdater:
         return resp.json()
 
     def update_msg(self, content: str) -> dict:
+        """Updates the existing Discord message with new content."""
         resp = requests.patch(
             self.hook_url + f"/messages/{self.msg_id}" + "?wait=true",
             json={"content": content}
@@ -116,6 +123,7 @@ class WebhookUpdater:
         return resp.json()
 
     def get_config_value(self, section: str, key: str) -> str:
+        """Retrieves a configuration value from the config parser, ensuring that it exists and is not empty."""
         if self.config is None:
             raise ValueError("Configuration parser is not initialized.")
         
@@ -130,6 +138,7 @@ class WebhookUpdater:
             exit(1)
 
     def change_config_value(self, section: str, key: str, value: str):
+        """Changes a configuration value and writes the updated configuration back to the file."""
         if self.config is None:
             raise ValueError("Configuration parser is not initialized.")
         
@@ -142,7 +151,10 @@ class WebhookUpdater:
             exit(1)
 
     def update_loop(self, content_func: Callable[..., str]):
-        
+        """
+        Main loop that updates the Discord message with content from the provided function and checks for GitHub updates at specified intervals.  
+        @param content_func: A function that generates the content to be sent to Discord. It should accept a boolean parameter indicating whether an update check is being performed.
+        """
         if sys.argv[-1] != "UpdateFox.py":
             next_update_check = datetime.fromtimestamp(float(sys.argv[-1]))
         
@@ -167,10 +179,19 @@ class WebhookUpdater:
                     if updated:
                         content_func(True)
                         self.restart()
+                
+                else:
+                    print("No Github updater set")
+                    exit(1)
 
             time.sleep(self.timeout)
 
+    def set_updater(self, updater: GithubUpdater):
+        """Sets the GithubUpdater instance to be used for checking updates."""
+        self.github_updater = updater
+
     def restart(self):
+        """Restarts the application by re-executing the current Python script with the same arguments."""
         print("Restarting application...")
         python = sys.executable
         time = datetime.now() + timedelta(days=1)

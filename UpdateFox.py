@@ -7,6 +7,7 @@ from webhook import WebhookUpdater
 from GithubUpdater import GithubUpdater
 
 def get_system_stats(printer: bl.Printer, restart: bool) -> str:
+    """Gathers system statistics such as CPU usage, RAM usage, battery status, and printer status, and returns a formatted string with this information. If the restart flag is set, it disconnects the printer and returns a restart message."""
     if restart:
         printer.disconnect()
         return "Restarting..."
@@ -57,26 +58,26 @@ def get_system_stats(printer: bl.Printer, restart: bool) -> str:
     return msg
 
 if __name__ == "__main__":
-    # Comment to not make it update
-    updater = WebhookUpdater(timeout=10)
-    ip = updater.get_config_value("PRINTER", "ip")
-    serial = updater.get_config_value("PRINTER", "serial")
-    access_code = updater.get_config_value("PRINTER", "access_code")
+    webhook = WebhookUpdater(timeout=10)
+    ip = webhook.get_config_value("PRINTER", "ip")
+    serial = webhook.get_config_value("PRINTER", "serial")
+    access_code = webhook.get_config_value("PRINTER", "access_code")
 
+    # Set up the GithubUpdater with details from the configuration file and assign it to the WebhookUpdater instance
     github_updater = GithubUpdater(
-        repo_owner=updater.get_config_value("UPDATER", "repo_owner"),
-        repo_name=updater.get_config_value("UPDATER", "repo_name"),
-        branch=updater.get_config_value("UPDATER", "branch"),
-        trigger=updater.get_config_value("UPDATER", "trigger"),
-        local_repo_path=updater.get_config_value("UPDATER", "local_repo_path")
+        repo_owner=webhook.get_config_value("UPDATER", "repo_owner"),
+        repo_name=webhook.get_config_value("UPDATER", "repo_name"),
+        branch=webhook.get_config_value("UPDATER", "branch"),
+        trigger=webhook.get_config_value("UPDATER", "trigger"),
+        local_repo_path=webhook.get_config_value("UPDATER", "local_repo_path")
     )
 
-    updater.github_updater = github_updater
+    webhook.set_updater(github_updater)
 
     printer = bl.Printer(ip, access_code, serial)
     
     printer.connect()
     with_session = partial(get_system_stats, printer)
-    updater.update_loop(with_session)
+    webhook.update_loop(with_session)
     
     printer.disconnect()
