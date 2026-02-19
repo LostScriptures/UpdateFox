@@ -125,17 +125,12 @@ class WebhookUpdater:
     def get_config_value(self, section: str, key: str) -> str:
         """Retrieves a configuration value from the config parser, ensuring that it exists and is not empty."""
         if self.config is None:
-            raise ValueError("Configuration parser is not initialized.")
+            raise RuntimeError("Configuration parser is not initialized.")
         
-        try:
-            value = self.config.get(section, key)
-            if value == "":
-                raise ValueError(f"Configuration value for [{section}] {key} is empty.")
-            return value
-
-        except Exception as e:
-            print(f"Error retrieving configuration value for [{section}] {key}: {e}")
-            exit(1)
+        value = self.config.get(section, key)
+        if value == "":
+            raise ValueError(f"Configuration value for [{section}] {key} is empty.")
+        return value
 
     def change_config_value(self, section: str, key: str, value: str):
         """Changes a configuration value and writes the updated configuration back to the file."""
@@ -155,10 +150,10 @@ class WebhookUpdater:
         Main loop that updates the Discord message with content from the provided function and checks for GitHub updates at specified intervals.  
         @param content_func: A function that generates the content to be sent to Discord. It should accept a boolean parameter indicating whether an update check is being performed.
         """
-        if sys.argv[-1] != "UpdateFox.py":
+        try:
             next_update_check = datetime.fromtimestamp(float(sys.argv[-1]))
         
-        else:
+        except ValueError:
             next_update_check = datetime.now()
         
         last_sha = None

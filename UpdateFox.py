@@ -2,6 +2,7 @@ import psutil
 from functools import partial
 from dataclasses import dataclass, field
 import bambulabs_api as bl
+from pathlib import Path
 
 from webhook import WebhookUpdater
 from GithubUpdater import GithubUpdater
@@ -10,7 +11,7 @@ from GithubUpdater import GithubUpdater
 class PCStats:
     cpu_usage: float = field(default=0.0)
     cpu_freq: float = field(default=0.0)
-    cpu_core_usages: list = field(default_factory=list)
+    cpu_core_usages: list[float] = field(default_factory=list)
 
     ram_used: float = field(default=0.0)
     ram_total: float = field(default=0.0)
@@ -66,7 +67,7 @@ def construct_msg(printer: bl.Printer, restart: bool) -> str:
 
     msg += f"CPU Frequency: {system_stats.cpu_freq:.2f} MHz\n"
     msg += "Core Usages: "
-    for i, usage in system_stats.cpu_core_usages:
+    for i, usage in enumerate(system_stats.cpu_core_usages):
         msg += f"|{i}: {usage}% "
     msg += "|\n"
 
@@ -95,6 +96,15 @@ def construct_msg(printer: bl.Printer, restart: bool) -> str:
 
 if __name__ == "__main__":
     webhook = WebhookUpdater(timeout=10)
+
+    try:
+        webhook.get_config_value("UPDATER", "local_repo_path")
+    except ValueError as e:
+        print(e)
+        print("Setting local_repo_path to the current directory...")
+        webhook.change_config_value("UPDATER", "local_repo_path", str(Path(__file__).parent))
+        print(Path(__file__).parent)
+
     ip = webhook.get_config_value("PRINTER", "ip")
     serial = webhook.get_config_value("PRINTER", "serial")
     access_code = webhook.get_config_value("PRINTER", "access_code")
