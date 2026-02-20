@@ -12,6 +12,7 @@ class ConfigSections(StrEnum):
 class ConfigHandler:
     """Holds the values of the config file in memory and provides methods to access and modify them."""
     def __init__(self, filename: str):
+        """Initializes the ConfigHandler by loading the configuration from the specified file."""
         self.filename = filename
         self.parser = ConfigParser()
 

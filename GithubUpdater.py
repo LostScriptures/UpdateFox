@@ -19,6 +19,7 @@ class GithubUpdater:
         return r.json()
 
     def do_update(self) -> None:
+        """Performs a git fetch and reset to update the local repository to match the latest commit on the specified branch."""
         print("Updating repo...")
 
         subprocess.run(["git", "fetch", "origin"], cwd=self.local_repo_path, check=True)
@@ -27,7 +28,7 @@ class GithubUpdater:
         print("Repo updated!")
 
     def check_repo(self, last_sha: str) -> tuple[str, bool]:
-        """Checks the GitHub repository for new commits and updates the local repository if the trigger is found in the commit message."""
+        """Checks the GitHub repository for new commits and returns the sha and if an update is needed."""
         do_update = False
         
         commit = self.get_repo()
