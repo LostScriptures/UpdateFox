@@ -14,7 +14,7 @@ CWD = Path(__file__).parent
 
 class WebhookUpdater:
     """Class responsible for managing a Discord webhook, including sending and updating messages, and checking for updates from a GitHub repository using a GithubUpdater instance."""
-    def __init__(self, config: ConfigHandler, filename: str = "config.ini", timeout: int = 20):
+    def __init__(self, config: ConfigHandler, timeout: int = 20):
         """Initializes the WebhookUpdater by loading configuration from the specified file, setting up the webhook URL, and ensuring a message ID is available for updates."""
         self.config = config
         self.timeout = timeout
