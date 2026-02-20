@@ -109,7 +109,6 @@ if __name__ == "__main__":
         config.get_value(CS.UPDATER, "repo_owner"),
         config.get_value(CS.UPDATER, "repo_name"),
         config.get_value(CS.UPDATER, "branch"),
-        config.get_value(CS.UPDATER, "trigger"),
         config.get_value(CS.UPDATER, "local_repo_path")
     )
 
