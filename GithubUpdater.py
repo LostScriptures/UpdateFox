@@ -3,12 +3,11 @@ import subprocess
 
 class GithubUpdater:
     """Class responsible for checking a GitHub repository for new commits and updating a local repository if a specified trigger is found in the commit message."""
-    def __init__(self, repo_owner: str, repo_name: str, branch: str, trigger: str, local_repo_path: str):
+    def __init__(self, repo_owner: str, repo_name: str, branch: str, local_repo_path: str):
         """Initializes the GithubUpdater with repository details and trigger information."""
         self.repo_owner = repo_owner
         self.repo_name = repo_name
         self.branch = branch
-        self.trigger = trigger
         self.local_repo_path = local_repo_path
 
     def get_repo(self) -> dict:
