@@ -37,7 +37,7 @@ class GithubUpdater:
         if sha == last_sha:
             return sha, do_update  # nothing new
  
-        print(f"New commit found: {sha[:7]}")
+        print(f"New commit found: {sha}")
         print(f"Message: {msg}")
 
         return sha, True
