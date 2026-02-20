@@ -3,89 +3,57 @@ import time
 import os
 import sys
 from functools import cache
-from configparser import ConfigParser
 from typing import Callable, Optional
 from pathlib import Path
 from datetime import datetime, timedelta
 
 from GithubUpdater import GithubUpdater
+from ConfigHandler import ConfigHandler, ConfigSections as CS
 
 CWD = Path(__file__).parent
 
 class WebhookUpdater:
     """Class responsible for managing a Discord webhook, including sending and updating messages, and checking for updates from a GitHub repository using a GithubUpdater instance."""
-    def __init__(self, filename: str = "config.ini", timeout: int = 20):
+    def __init__(self, config: ConfigHandler, filename: str = "config.ini", timeout: int = 20):
         """Initializes the WebhookUpdater by loading configuration from the specified file, setting up the webhook URL, and ensuring a message ID is available for updates."""
+        self.config = config
         self.timeout = timeout
         self.github_updater: Optional[GithubUpdater] = None
         self.last_msg: str = ""
         
         # Get webhook details from config file
-        parser = ConfigParser()
-        self.config = parser
+        self.config = config
 
-        try:
-            with open(CWD / filename, "r") as f:
-                parser.read_file(f)
-
-        except FileNotFoundError:
-            print(f"Could not find configuration file: {filename}")
-            exit(1)
-
-        except PermissionError:
-            print(f"Permission denied when trying to read configuration file: {filename}")
-            exit(1)
-
-        self.id = self.get_config_value("WEBHOOK", "ID")
+        self.id = config.get_value(CS.WEBHOOK, "id")
         if self.id == "":
             raise ValueError("Webhook ID is not set in the configuration file.")
             
-        self.token = self.get_config_value("WEBHOOK", "TOKEN")
+        self.token = config.get_value(CS.WEBHOOK, "token")
         if self.token == "":
             raise ValueError("Webhook Token is not set in the configuration file.")
         
         # Construct webhook URL
         self.hook_url = f"https://discord.com/api/webhooks/{self.id}/{self.token}"
 
-        self.msg_id = self.get_config_value("WEBHOOK", "MSG_ID")
+        self.msg_id = config.get_value(CS.WEBHOOK, "msg_id")
         if self.msg_id == "":
             print("No existing message ID found, sending new message...")
-            self.get_new_msg_id(parser, filename)
+            self.get_new_msg_id()
         
         try:
             self.update_msg("Setup...")
 
         except:
             print("Failed to update message, resetting MSG_ID and sending new message...")
-            parser.set("WEBHOOK", "MSG_ID", "")
-            self.write_config(filename)
-            self.get_new_msg_id(parser, filename)
+            self.config.change_value(CS.WEBHOOK, "msg_id", "")
+            self.get_new_msg_id()
 
-    def get_new_msg_id(self, parser: ConfigParser, filename: str):
+    def get_new_msg_id(self):
         """Sends a new message to the Discord channel and updates the configuration with the new message ID."""
         response = self.send_msg("Setup...")
             
         self.msg_id = response["id"]
-        parser.set("WEBHOOK", "MSG_ID", str(self.msg_id))
-
-        self.write_config(filename)
-
-    def write_config(self, filename: str):
-        """Writes the current configuration back to the specified file."""
-        if self.config is None:
-            raise ValueError("Configuration parser is not initialized.")
-
-        try:
-            with open(CWD / filename, "w") as f:
-                self.config.write(f)
-        
-        except FileNotFoundError:
-            print("Could not find configuration file")
-            exit(1)
-
-        except PermissionError:
-            print("Permission denied when trying to write to configuration file")
-            exit(1)
+        self.config.change_value(CS.WEBHOOK, "msg_id", str(self.msg_id))
 
     @cache
     def text_to_emoji(self, text: str) -> str:
@@ -122,41 +90,20 @@ class WebhookUpdater:
         
         return resp.json()
 
-    def get_config_value(self, section: str, key: str) -> str:
-        """Retrieves a configuration value from the config parser, ensuring that it exists and is not empty."""
-        if self.config is None:
-            raise RuntimeError("Configuration parser is not initialized.")
-        
-        value = self.config.get(section, key)
-        if value == "":
-            raise ValueError(f"Configuration value for [{section}] {key} is empty.")
-        return value
-
-    def change_config_value(self, section: str, key: str, value: str):
-        """Changes a configuration value and writes the updated configuration back to the file."""
-        if self.config is None:
-            raise ValueError("Configuration parser is not initialized.")
-        
-        try:
-            self.config.set(section, key, value)
-            self.write_config("config.ini")
-
-        except Exception as e:
-            print(f"Error changing configuration value for [{section}] {key}: {e}")
-            exit(1)
-
     def update_loop(self, content_func: Callable[..., str]):
         """
         Main loop that updates the Discord message with content from the provided function and checks for GitHub updates at specified intervals.  
         @param content_func: A function that generates the content to be sent to Discord. It should accept a boolean parameter indicating whether an update check is being performed.
         """
         try:
-            next_update_check = datetime.fromtimestamp(float(sys.argv[-1]))
+            last_check = self.config.get_value(CS.UPDATER, "next_update_check")
+            next_update_check = datetime.fromtimestamp(float(last_check))
         
         except ValueError:
             next_update_check = datetime.now()
+            self.config.change_value(CS.UPDATER, "next_update_check", str(next_update_check.timestamp()))
         
-        last_sha = None
+        last_sha = self.config.get_value(CS.UPDATER, "last_sha")
 
         while True:
             content = content_func(False)
@@ -167,11 +114,15 @@ class WebhookUpdater:
 
             if (now := datetime.now()) >= next_update_check:
                 next_update_check = now + timedelta(days=1)
+
                 print(f"[{now}]Checking for updates...")
+
                 if self.github_updater is not None:
-                    last_sha, updated = self.github_updater.check_and_update_repo(last_sha) 
+                    last_sha, do_update = self.github_updater.check_repo(last_sha) 
                 
-                    if updated:
+                    if do_update:
+                        self.config.change_value(CS.UPDATER, "last_sha", last_sha)
+                        self.config.change_value(CS.UPDATER, "next_update_check", str(next_update_check.timestamp()))
                         content_func(True)
                         self.restart()
                 
@@ -189,5 +140,4 @@ class WebhookUpdater:
         """Restarts the application by re-executing the current Python script with the same arguments."""
         print("Restarting application...")
         python = sys.executable
-        time = datetime.now() + timedelta(days=1)
-        os.execv(python, [python] + sys.argv + [str(time.timestamp())])
+        os.execv(python, [python] + sys.argv)

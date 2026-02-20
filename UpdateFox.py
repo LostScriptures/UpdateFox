@@ -6,6 +6,7 @@ from pathlib import Path
 
 from webhook import WebhookUpdater
 from GithubUpdater import GithubUpdater
+from ConfigHandler import ConfigHandler, ConfigSections as CS
 
 @dataclass
 class PCStats:
@@ -95,32 +96,30 @@ def construct_msg(printer: bl.Printer, restart: bool) -> str:
     return msg
 
 if __name__ == "__main__":
-    webhook = WebhookUpdater(timeout=10)
+    config = ConfigHandler("config.ini")
+    webhook = WebhookUpdater(config, timeout=10)
 
-    try:
-        webhook.get_config_value("UPDATER", "local_repo_path")
-    except ValueError as e:
-        print(e)
+    if config.get_value(CS.UPDATER, "local_repo_path") == "":
         print("Setting local_repo_path to the current directory...")
-        webhook.change_config_value("UPDATER", "local_repo_path", str(Path(__file__).parent))
+        config.change_value(CS.UPDATER, "local_repo_path", str(Path(__file__).parent))
         print(Path(__file__).parent)
-
-    ip = webhook.get_config_value("PRINTER", "ip")
-    serial = webhook.get_config_value("PRINTER", "serial")
-    access_code = webhook.get_config_value("PRINTER", "access_code")
 
     # Set up the GithubUpdater with details from the configuration file and assign it to the WebhookUpdater instance
     github_updater = GithubUpdater(
-        repo_owner=webhook.get_config_value("UPDATER", "repo_owner"),
-        repo_name=webhook.get_config_value("UPDATER", "repo_name"),
-        branch=webhook.get_config_value("UPDATER", "branch"),
-        trigger=webhook.get_config_value("UPDATER", "trigger"),
-        local_repo_path=webhook.get_config_value("UPDATER", "local_repo_path")
+        config.get_value(CS.UPDATER, "repo_owner"),
+        config.get_value(CS.UPDATER, "repo_name"),
+        config.get_value(CS.UPDATER, "branch"),
+        config.get_value(CS.UPDATER, "trigger"),
+        config.get_value(CS.UPDATER, "local_repo_path")
     )
 
     webhook.set_updater(github_updater)
 
-    printer = bl.Printer(ip, access_code, serial)
+    printer = bl.Printer(
+        config.get_value(CS.PRINTER, "ip"),
+        config.get_value(CS.PRINTER, "access_code"),
+        config.get_value(CS.PRINTER, "serial")
+    )
     
     printer.connect()
     with_session = partial(construct_msg, printer)
