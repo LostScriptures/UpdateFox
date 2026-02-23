@@ -8,6 +8,10 @@ from webhook import WebhookUpdater
 from GithubUpdater import GithubUpdater
 from ConfigHandler import ConfigHandler, ConfigSections as CS
 
+# TODO: Make the entire system into a server and multi client system
+#       - Client gathers pc data and reports back to server
+#       - Server collects data and printer info and sends updates to discord 
+
 @dataclass
 class PCStats:
     cpu_usage: float = field(default=0.0)
